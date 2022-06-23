@@ -1,0 +1,111 @@
+name: DEMO
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.SUBSCRIPTION_SP_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.SUBSCRIPTION_SP_CLIENT_SECRET }}
+  ARM_ENVIRONMENT: "usgovernment"
+  ARM_SUBSCRIPTION_ID: ${{ secrets.DEMO_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.DEMO_TENANT_ID }}
+
+  TF_VAR_group_role_assignments: '{
+    "DEMO-KV-Admins": [
+      {
+        role_name: "Key Vault Administrator",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}/resourceGroups/DEMO"
+      }
+    ],
+    "DEMO Team Members": [
+      {
+        role_name: "Contributor",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}"
+      }
+    ]
+  }'
+
+  # Use the below block for USER Managed identities - note the object_id attr
+  # TF_VAR_managed_id_role_assignments: '{
+  #   "DEMO-Policy": [
+  #     {
+  #       object_id: "<USER_MANAGED_IDENTITY_OBJECT_ID>",
+  #       role_name: "Virtual Machine Contributor",
+  #       role_type: "builtin",
+  #       scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}"
+  #     }
+  #   ]
+  # }'
+
+  # Use the below block for Service Principals (Enterprise Applications)
+  TF_VAR_sp_role_assignments: '{
+    "DEMO-PolicyMgmt": [
+      {
+        role_name: "Monitoring Contributor",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}/resourceGroups/POLICY"
+      },
+      {
+        role_name: "Role Assignment Write Delete",
+        role_type: "custom",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}"
+      },
+      {
+        role_name: "Image Copy Contributor",
+        role_type: "custom",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}"
+      }
+    ],
+    "AzureDatabricks": [
+      {
+        role_name: "Key Vault Secrets Officer",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}/resourceGroups/DEMO/providers/Microsoft.KeyVault/vaults/demokeyvault"
+      }
+    ]
+  }'
+
+  TF_VAR_user_role_assignments: '{
+    "user.name@contoso.com": [
+      {
+        role_name: "Contributor",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}"
+      }
+    ],
+    "bob.roberts@contoso.com": [
+      {
+        role_name: "Virtual Machine Administrator Login",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}/resourceGroups/win2019STIG"
+      },
+      {
+        role_name: "Key Vault Secrets Officer",
+        role_type: "builtin",
+        scope:     "/subscriptions/${{ secrets.DEMO_SUBSCRIPTION_ID }}/resourceGroups/win2019STIG"
+      }
+    ],
+  }'
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/DEMO.yml"
+      - "terraform/**"
+      - "!README.md"
+      - "!LICENSE"
+
+jobs:
+  terraform:
+    name: "Terraform"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2.3.4
+
+      - name: Terraform
+        run: |
+          cd terraform
+          terraform init -input=false -upgrade -backend-config=${{ github.workspace }}/.tfbackend/${{ github.workflow }}
+          terraform plan -input=false -out=tfplan
+          terraform apply -auto-approve tfplan

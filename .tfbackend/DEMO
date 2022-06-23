@@ -1,0 +1,6 @@
+key                  = "DEMO.tfstate"
+environment          = "usgovernment"
+resource_group_name  = "tfstate"
+storage_account_name = "tfstate"
+container_name       = "tfstate"
+use_msi              = true
